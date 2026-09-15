@@ -4,16 +4,11 @@ An agent that solves American-style crossword puzzles with Nebius Token Factory 
 
 ## Summary
 
-My submission: a crossword agent on Nebius Token Factory. On 39 held-out NYT Monday puzzles it solves 37 perfectly, 99.9% of letters right, about four cents per puzzle.
+This is my submission: a crossword agent built on Nebius Token Factory. On 39 held-out NYT Monday puzzles it solves 37 perfectly, gets 99.9% of letters right, and costs about four cents per puzzle.
 
-Four pieces:
+The harness has four pieces. First, one LLM call takes every clue with its length, reasoning off, and returns a few candidate words per clue. Second, my code fills the grid with a beam search that picks one candidate per slot so every crossing matches, and re-asks the model with the known letters for slots it cannot settle. I keep this in code, not in an agent, because search is where an LLM is slow and gets confused. Third, a separate LLM call audits the finished grid and flags words that do not answer their clue. Fourth, for each flag the model proposes a near-identical word with one to three letters changed, and the beam search re-solves with it.
 
-1. **Candidates.** One LLM call with every clue and its length, reasoning off, returns a few candidate words per clue.
-2. **Fill.** My code runs a beam search that picks one candidate per slot so every crossing matches, and re-asks the model with known letters for slots it cannot settle. Code, not an agent, because search is where an LLM is slow and gets confused.
-3. **Audit.** A separate LLM call checks the finished grid and flags words that do not answer their clue.
-4. **Correct.** For each flag the model proposes a near-identical word, one to three letters changed, and the beam search re-solves with it.
-
-This removes most of the classic miss: one wrong letter producing two plausible non-words that confirm each other.
+This removes most of the classic miss, where one wrong letter produces two plausible non-words that confirm each other.
 
 ## How it works
 
