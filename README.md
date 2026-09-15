@@ -7,7 +7,7 @@ An agent that solves American-style crossword puzzles with open-weight models se
 The model is only ever asked one question, "what could these clues be?", and answers with ranked candidates. Deterministic code does everything else: it fills the grid, decides which entries to trust, decides what to ask next, and decides when to stop.
 
 ```text
-SWEEP     ask every clue once, reasoning off, ~25 clues per call in parallel     → candidate pools
+SWEEP     ask every clue once, reasoning off, 26 clues per call in parallel     → candidate pools
 FILL      beam search over a weighted constraint problem; crossings are hard constraints;
           an entry may stay blank rather than take an unsupported answer
 VERIFY    an entry is done only if the model proposed it for that clue AND its crossings agree
@@ -18,7 +18,7 @@ AUDIT     a reasoning model checks every fill against its clue, proposes small c
 STOP      all entries verified, or budget spent → grid plus the list of doubtful entries
 ```
 
-The audit stage exists because nearly every miss is one shared cell where a real word crosses a pattern-fitting non-word that the model proposed under a letter hint (ISAT crossing ONOFFSTITCH). The audit model sees each fill next to its clue, names the ones that do not fit with a same-length replacement, then sees what that replacement does to the crossing entries and confirms or rejects the joint change. A confirmed answer enters the candidate pools with a strong prior and the flagged fills are discounted; the crossings it touches are re-asked with the contested cell blanked, so they count as verified only if the sweep model proposes their new fill independently. The deterministic fill still makes the final choice.
+The audit stage exists because nearly every miss is one shared cell where a real word crosses a pattern-fitting non-word that the model proposed under a letter hint (SWITCH crossing DINNERWABLE where STITCH and DINNERTABLE were meant). The audit model sees each fill next to its clue, names the ones that do not fit with a same-length replacement, then sees what that replacement does to the crossing entries and confirms or rejects the joint change. A confirmed answer enters the candidate pools with a strong prior and the flagged fills are discounted; the crossings it touches are re-asked with the contested cell blanked, so they count as verified only if the sweep model proposes their new fill independently. The deterministic fill still makes the final choice.
 
 Why this shape: every system that has solved full grids exactly (Proverb, Dr.Fill, the Berkeley Crossword Solver, SweepClip) generates broad candidates and lets a constraint solver pick. Two measured facts drove the details. Giving the model crossing letters roughly doubles its clue accuracy, so the cheapest lever is a second pass with letters. And reasoning tokens dominated cost without improving clue accuracy, so the sweep runs with reasoning switched off and bounded reasoning is used only on the last few hard clues and in the audit.
 
@@ -87,7 +87,7 @@ uv run --env-file .env python -m evals.run_eval <directory or fixture files> --p
 uv run python -m evals.summarize eval-results/run.jsonl
 ```
 
-`--workers` solves that many puzzles concurrently (each solve is network-bound; four workers cut a 40-puzzle run from about 15 minutes to about 5).
+`--workers` solves that many puzzles concurrently; each solve is network-bound, so the run time falls roughly in proportion until the provider's rate limit is reached (the results below used 32).
 
 The harness holds the gold grids, runs the same `solve` function the CLI uses, reveals the solution only after each solve, prints one JSON line per run, and appends metric-only records to the run log. `summarize` turns any set of records into a report. Scoring is deterministic; there is no model-as-judge in the scoring.
 
@@ -108,13 +108,13 @@ Three independent runs over the 39-puzzle evaluation set with the default config
 | 3 | 38 of 39 | 99.94% | 100% | 8.6 | $0.036 |
 | **All** | **111 of 117 runs (94.9%, 95% CI 89 to 98)** | | | | |
 
-Thirty-three puzzles were solved in every run and every puzzle was solved in at least one; each miss is a single wrong cell. The solver samples at temperature 0.2, so repeats are the right way to read any single number. Per-puzzle wall clock is 30 to 50 s at eight concurrent puzzles.
+Thirty-three puzzles were solved in every run and every puzzle was solved in at least one. Four of the six misses are a single wrong cell; the other two are a corner with several wrong entries, once reported by the solver as incomplete. The solver samples at temperature 0.2, so repeats are the right way to read any single number. With 32 puzzles solved concurrently, the median puzzle took about 23 s and the mean 30 to 50 s; the mean is pulled up by the few puzzles that reach the escalation and audit rounds.
 
 For scale, the SweepClip paper reports 48% exact on 100 NYT Mondays with GPT-4-Turbo under a $0.50-per-puzzle budget.
 
 ### What a miss looks like
 
-A miss is almost always one cell shared by two crossing entries, where one side is a real word and the other a pattern-fitting non-word that the model proposed under a letter hint (ISAT crossing ONOFFSTITCH for ISAW/ONOFFSWITCH). Both were proposed and each supported the other, so verification accepted them. The audit stage is the answer to exactly this: it judges each fill against its clue, and the re-ask with the contested cell blanked makes the crossing earn its verification independently.
+A miss is usually one cell shared by two crossing entries, where one side is a real word and the other a pattern-fitting non-word that the model proposed under a letter hint (SWITCH crossing DINNERWABLE, where STITCH and DINNERTABLE were meant). Both were proposed and each supported the other, so verification accepted them. The audit stage is the answer to exactly this: it judges each fill against its clue, and the re-ask with the contested cell blanked makes the crossing earn its verification independently.
 
 ## Tests
 
@@ -122,7 +122,7 @@ A miss is almost always one cell shared by two crossing entries, where one side 
 uv run python -m unittest discover -v
 ```
 
-Fourteen offline tests: grid parsing, the audit stage adopting a confirmed correction, the beam fill abstaining when a weak candidate blocks stronger ones, verification of crossing-implied entries, prompt patterns that never echo a doubtful letter, capped vote bonuses, tolerant JSON parsing, recoverable versus fatal provider errors, the call budget, and an end-to-end offline solve whose prompts are checked for gold leakage.
+Thirteen offline tests: grid parsing, the audit stage adopting a confirmed correction, the beam fill abstaining when a weak candidate blocks stronger ones, verification of crossing-implied entries, prompt patterns that never echo a doubtful letter, capped vote bonuses, tolerant JSON parsing, recoverable versus fatal provider errors, the call budget, and an end-to-end offline solve whose prompts are checked for gold leakage.
 
 ## Layout
 
