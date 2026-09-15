@@ -4,11 +4,11 @@ An agent that solves American-style crossword puzzles with Nebius Token Factory 
 
 ## Summary
 
-This is my submission: a crossword agent built on Nebius Token Factory. On 39 held-out NYT Monday puzzles it solves 37 perfectly, gets 99.9% of letters right, and costs about four cents per puzzle.
+This is my submission: a crossword agent built on Nebius Token Factory. I tested it on 39 held-out NYT Monday puzzles. It solves 37 perfectly and gets 99.9% of letters right. Each puzzle costs about four cents.
 
-The harness has four pieces. First, one LLM call takes every clue with its length, reasoning off, and returns a few candidate words per clue. Second, my code fills the grid with a beam search that picks one candidate per slot so every crossing matches, and re-asks the model with the known letters for slots it cannot settle. I keep this in code, not in an agent, because search is where an LLM is slow and gets confused. Third, a separate LLM call audits the finished grid and flags words that do not answer their clue. Fourth, for each flag the model proposes a near-identical word with one to three letters changed, and the beam search re-solves with it.
+The harness has four pieces. First, one LLM call reads every clue with its length, reasoning off. It returns a few candidate words per clue. Second, my code fills the grid with a beam search. It picks one candidate per slot so every crossing matches. For slots it cannot settle, it re-asks the model with the known letters. I keep this in code, not in an agent, because search is where an LLM is slow and gets confused. Third, a separate LLM call audits the finished grid. It flags words that do not answer their clue. Fourth, for each flag the model proposes a near-identical word, one to three letters changed. The beam search then re-solves with it.
 
-This removes most of the classic miss, where one wrong letter produces two plausible non-words that confirm each other.
+This removes most of the classic miss: one wrong letter makes two plausible non-words that confirm each other.
 
 ## How it works
 
