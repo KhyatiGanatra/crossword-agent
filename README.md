@@ -4,19 +4,16 @@ An agent that solves American-style crossword puzzles with Nebius Token Factory 
 
 ## Summary
 
-This is my submission: a crossword agent built on Nebius Token Factory, tested on 39 held-out New York Times Monday puzzles, where it solves 37 of 39 perfectly and gets 99.9% of letters right, at about four cents per puzzle.
+My submission: a crossword agent on Nebius Token Factory. On 39 held-out NYT Monday puzzles it solves 37 perfectly, 99.9% of letters right, about four cents per puzzle.
 
-The harness has four pieces.
+Four pieces:
 
-First, I give an LLM every clue with its letter count, in one batch with reasoning off, and it returns a few candidate words for each.
+1. **Candidates.** One LLM call with every clue and its length, reasoning off, returns a few candidate words per clue.
+2. **Fill.** My code runs a beam search that picks one candidate per slot so every crossing matches, and re-asks the model with known letters for slots it cannot settle. Code, not an agent, because search is where an LLM is slow and gets confused.
+3. **Audit.** A separate LLM call checks the finished grid and flags words that do not answer their clue.
+4. **Correct.** For each flag the model proposes a near-identical word, one to three letters changed, and the beam search re-solves with it.
 
-Second, my own code does a deterministic constrained fill: a beam search that picks one candidate per slot so every crossing letter matches, re-asking the model with the known letters for slots it cannot settle. I do this in code, not with an agent, because it is a hard search problem where an LLM is slow and gets confused.
-
-Third, a separate LLM call audits the finished grid and flags any word that does not actually answer its clue.
-
-Fourth, for each flagged word the model proposes a similar word with one to three letters changed, and the grid is re-solved through the beam search with that correction in play.
-
-This removes most of the classic failure where one wrong letter yields two plausible non-words that confirm each other.
+This removes most of the classic miss: one wrong letter producing two plausible non-words that confirm each other.
 
 ## How it works
 
