@@ -110,6 +110,15 @@ The harness holds the gold grids, runs the same `solve` function the CLI uses, r
 
 Intervals are bootstrap over puzzles. On the 10 development puzzles with three repeats each: 50% exact over 30 runs (73% on the five modern ones); these were used during development and are reported separately.
 
+**Audit ablation.** The same three-repeat protocol with `--audit-model none`:
+
+| | Exact over 117 runs | Solved in all three runs | Claim precision | Model calls | Cost per puzzle |
+|---|---:|---:|---:|---:|---:|
+| Audit on | 111 (94.9%, CI 89 to 98) | 33 of 39 | 96% | 8.6 | $0.036 |
+| Audit off | 101 (86.3%, CI 79 to 91) | 29 of 39 | 90% | 7.5 | $0.035 |
+
+The audit costs about one extra call and under a tenth of a cent per puzzle, and it accounts for roughly nine points of exact-solve rate. Every miss it fixes is the shared-cell pattern above (PETS crossing CHESEAWAY, SLIM crossing LATEANDEDITHTOO); without it, one such puzzle failed in all three runs.
+
 For scale, the SweepClip paper reports 48% exact on the same 100 NYT Mondays with GPT-4-Turbo under a $0.50-per-puzzle budget; this solver reaches 29% on 90 of them, and 46% on the modern half, at about one cent per puzzle.
 
 ### What a miss looks like
