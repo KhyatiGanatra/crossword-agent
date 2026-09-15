@@ -3,7 +3,7 @@
 The solver asks the model exactly one kind of question ("what could these clues be?") and expects
 a JSON object back. This module hides the provider details behind ``AnswerModel``:
 
-- ``NebiusModel`` calls Token Factory chat completions with ``response_format: json_object``,
+- ``TokenFactoryModel`` calls Token Factory chat completions with ``response_format: json_object``,
   reasoning switched off unless the caller asks for a bounded reasoning pass, prices from the live
   catalog, and a clear split between recoverable failures (returned in ``JsonReply.error``) and
   configuration failures (raised as ``ModelError``).
@@ -100,7 +100,7 @@ class FixtureModel:
 _NON_RECOVERABLE_HTTP = frozenset({400, 401, 403, 404, 405, 413, 415, 422})
 
 
-class NebiusModel:
+class TokenFactoryModel:
     """Dependency-free Token Factory chat-completions adapter."""
 
     def __init__(
@@ -111,13 +111,13 @@ class NebiusModel:
         timeout_seconds: float = 180.0,
     ) -> None:
         self._model = model
-        self._api_key = api_key or os.getenv("NEBIUS_API_KEY")
+        self._api_key = api_key or os.getenv("TOKEN_FACTORY_API_KEY")
         self._base_url = (
-            base_url or os.getenv("NEBIUS_BASE_URL") or "https://api.tokenfactory.nebius.com/v1"
+            base_url or os.getenv("TOKEN_FACTORY_BASE_URL") or "https://api.tokenfactory.nebius.com/v1"
         ).rstrip("/")
         self._timeout_seconds = timeout_seconds
         if not self._api_key:
-            raise ModelError("NEBIUS_API_KEY is required for the Nebius provider")
+            raise ModelError("TOKEN_FACTORY_API_KEY is required for the Token Factory provider")
         self._catalog = self._load_catalog()
 
     @property
@@ -213,25 +213,25 @@ class NebiusModel:
                 detail = exc.read().decode("utf-8", errors="replace")[:500]
                 if exc.code in _NON_RECOVERABLE_HTTP:
                     raise ModelError(
-                        f"Nebius returned HTTP {exc.code}: {detail}", category="http"
+                        f"Token Factory returned HTTP {exc.code}: {detail}", category="http"
                     ) from exc
                 last_error = ModelError(
-                    f"Nebius returned HTTP {exc.code}: {detail}", category="http", recoverable=True
+                    f"Token Factory returned HTTP {exc.code}: {detail}", category="http", recoverable=True
                 )
             except TimeoutError as exc:
                 last_error = ModelError(
-                    f"Nebius request timed out after {self._timeout_seconds:g} seconds: {exc}",
+                    f"Token Factory request timed out after {self._timeout_seconds:g} seconds: {exc}",
                     category="timeout",
                     recoverable=True,
                 )
             except error.URLError as exc:
                 category = "timeout" if isinstance(exc.reason, TimeoutError) else "transport"
                 last_error = ModelError(
-                    f"Nebius request failed: {exc.reason}", category=category, recoverable=True
+                    f"Token Factory request failed: {exc.reason}", category=category, recoverable=True
                 )
             except json.JSONDecodeError as exc:
                 last_error = ModelError(
-                    f"Nebius returned a non-JSON response: {exc}",
+                    f"Token Factory returned a non-JSON response: {exc}",
                     category="response_parse",
                     recoverable=True,
                 )

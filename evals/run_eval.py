@@ -20,7 +20,7 @@ from crossword_agent.cli import (
     configuration_record,
     require_candidate_bank,
 )
-from crossword_agent.model import FixtureModel, ModelError, NebiusModel
+from crossword_agent.model import FixtureModel, ModelError, TokenFactoryModel
 from crossword_agent.puzzle import load_fixture
 from crossword_agent.run_history import append_run_record, build_run_record
 from crossword_agent.sweep_solver import solve_with_sweep_fill
@@ -63,9 +63,9 @@ def main(argv: list[str] | None = None) -> int:
     paths = _fixture_paths(args.puzzles)
     config = config_from_args(args)
     try:
-        nebius = (
-            NebiusModel(model=args.model, timeout_seconds=args.request_timeout)
-            if args.provider == "nebius"
+        remote = (
+            TokenFactoryModel(model=args.model, timeout_seconds=args.request_timeout)
+            if args.provider == "token-factory"
             else None
         )
     except ModelError as exc:
@@ -76,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     for path in paths:
         fixture = load_fixture(path)
         try:
-            if nebius is None:
+            if remote is None:
                 require_candidate_bank(fixture)
         except ValueError as exc:
             print(f"Configuration error: {exc}")
@@ -85,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def run_one(job: tuple) -> tuple[dict, dict]:
         fixture, repeat = job
-        model = nebius if nebius is not None else FixtureModel(fixture.candidate_bank)
+        model = remote if remote is not None else FixtureModel(fixture.candidate_bank)
         result = solve_with_sweep_fill(fixture.puzzle, model, config)
         metrics = score_result(fixture.puzzle, fixture.solution, result)
         record = {

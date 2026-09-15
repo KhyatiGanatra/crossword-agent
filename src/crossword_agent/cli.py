@@ -4,7 +4,7 @@ import argparse
 import os
 from pathlib import Path
 
-from .model import FixtureModel, ModelError, NebiusModel
+from .model import FixtureModel, ModelError, TokenFactoryModel
 from .puzzle import load_fixture
 from .run_history import append_run_record, build_run_record
 from .sweep_solver import solve_with_sweep_fill
@@ -51,34 +51,34 @@ def _show_event(event: TraceEvent) -> None:
 def add_solver_arguments(parser: argparse.ArgumentParser) -> None:
     """Solver and provider flags shared by the CLI and the evaluation harness."""
 
-    parser.add_argument("--provider", choices=("fixture", "nebius"), default="fixture")
+    parser.add_argument("--provider", choices=("fixture", "token-factory"), default="fixture")
     parser.add_argument(
         "--model",
-        default=os.getenv("NEBIUS_MODEL", "moonshotai/Kimi-K3"),
+        default=os.getenv("TOKEN_FACTORY_MODEL", "moonshotai/Kimi-K3"),
         help="Sweep and repair model, run without reasoning (default: Kimi K3)",
     )
     parser.add_argument(
         "--strong-model",
         type=_optional_model,
-        default=os.getenv("NEBIUS_STRONG_MODEL", "deepseek-ai/DeepSeek-V4-Pro"),
+        default=os.getenv("TOKEN_FACTORY_STRONG_MODEL", "deepseek-ai/DeepSeek-V4-Pro"),
         help="Stronger no-reasoning model for unverified entries; 'none' disables (default: DeepSeek V4 Pro)",
     )
     parser.add_argument(
         "--reasoning-model",
         type=_optional_model,
-        default=os.getenv("NEBIUS_REASONING_MODEL", "zai-org/GLM-5.3-Flash"),
+        default=os.getenv("TOKEN_FACTORY_REASONING_MODEL", "zai-org/GLM-5.3-Flash"),
         help="Bounded-reasoning model (reasoning_effort low) for the last unverified entries; 'none' disables (default: GLM-5.3-Flash)",
     )
     parser.add_argument(
         "--request-timeout",
         type=float,
-        default=float(os.getenv("NEBIUS_REQUEST_TIMEOUT", "180")),
+        default=float(os.getenv("TOKEN_FACTORY_REQUEST_TIMEOUT", "180")),
         help="Seconds to wait for each Token Factory response (default: 180)",
     )
     parser.add_argument(
         "--audit-model",
         type=_optional_model,
-        default=os.getenv("NEBIUS_AUDIT_MODEL", "zai-org/GLM-5.3-Flash"),
+        default=os.getenv("TOKEN_FACTORY_AUDIT_MODEL", "zai-org/GLM-5.3-Flash"),
         help="Reasoning model that audits clue fit and proposes small corrections; 'none' disables (default: GLM-5.3-Flash)",
     )
     parser.add_argument("--audit-rounds", type=int, default=2)
@@ -140,7 +140,7 @@ def require_candidate_bank(fixture: PuzzleFixture) -> None:
     if not fixture.candidate_bank:
         raise ValueError(
             f"fixture {fixture.puzzle.id} has no candidate_bank, so the offline fixture provider "
-            "cannot answer its clues; run with --provider nebius"
+            "cannot answer its clues; run with --provider token-factory"
         )
 
 
@@ -169,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             require_candidate_bank(fixture)
             model = FixtureModel(fixture.candidate_bank)
         else:
-            model = NebiusModel(model=args.model, timeout_seconds=args.request_timeout)
+            model = TokenFactoryModel(model=args.model, timeout_seconds=args.request_timeout)
     except (ModelError, ValueError) as exc:
         print(f"Configuration error: {exc}")
         return 2

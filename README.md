@@ -1,6 +1,6 @@
-# Nebius Crossword Agent
+# Crossword Agent
 
-An agent that solves American-style crossword puzzles with Nebius Token Factory models. Built for the Nebius Forward Deployed Engineer take-home.
+An agent that solves American-style crossword puzzles with open-weight models served by Token Factory.
 
 ## How it works
 
@@ -26,10 +26,10 @@ Model roles, all chosen at runtime:
 
 | Role | Default | Flag / env var |
 |---|---|---|
-| Sweep and repair, reasoning off | `moonshotai/Kimi-K3` (DeepSeek V4 Flash is the low-cost alternative) | `--model` / `NEBIUS_MODEL` |
-| Strong escalation, reasoning off | `deepseek-ai/DeepSeek-V4-Pro` | `--strong-model` / `NEBIUS_STRONG_MODEL` |
-| Bounded reasoning (`reasoning_effort: low`) | `zai-org/GLM-5.3-Flash` | `--reasoning-model` / `NEBIUS_REASONING_MODEL` |
-| Clue-fit audit (`reasoning_effort: low`) | `zai-org/GLM-5.3-Flash` | `--audit-model` / `NEBIUS_AUDIT_MODEL` |
+| Sweep and repair, reasoning off | `moonshotai/Kimi-K3` (DeepSeek V4 Flash is the low-cost alternative) | `--model` / `TOKEN_FACTORY_MODEL` |
+| Strong escalation, reasoning off | `deepseek-ai/DeepSeek-V4-Pro` | `--strong-model` / `TOKEN_FACTORY_STRONG_MODEL` |
+| Bounded reasoning (`reasoning_effort: low`) | `zai-org/GLM-5.3-Flash` | `--reasoning-model` / `TOKEN_FACTORY_REASONING_MODEL` |
+| Clue-fit audit (`reasoning_effort: low`) | `zai-org/GLM-5.3-Flash` | `--audit-model` / `TOKEN_FACTORY_AUDIT_MODEL` |
 
 ## Setup
 
@@ -42,8 +42,8 @@ uv sync
 For live runs, create a Token Factory API key and put it in a gitignored `.env` (copy `.env.example`):
 
 ```text
-NEBIUS_API_KEY=...
-NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1
+TOKEN_FACTORY_API_KEY=...
+TOKEN_FACTORY_BASE_URL=https://api.tokenfactory.nebius.com/v1
 ```
 
 ## Run
@@ -57,7 +57,7 @@ uv run crossword-agent
 Live, on any puzzle in the fixture format, watching the grid fill stage by stage:
 
 ```bash
-uv run --env-file .env crossword-agent path/to/puzzle.json --provider nebius
+uv run --env-file .env crossword-agent path/to/puzzle.json --provider token-factory
 ```
 
 Each stage prints its header (verified entries, filled cells, tokens, cost), the grid, the entries placed, revised, or removed, and the entries still unverified. The final lines report the solver's own status, the deterministic pass/fail review against the hidden solution, calls, tokens, reasoning tokens, elapsed time, and cost. Every run appends a metric-only record (no puzzle content) to `eval-results/model-runs.jsonl`; `--no-run-log` skips that.
@@ -83,37 +83,38 @@ The evaluation below used New York Times Monday puzzles imported locally from th
 ## Evaluation
 
 ```bash
-uv run --env-file .env python -m evals.run_eval <directory or fixture files> --provider nebius --repeats 3 --workers 4 --output eval-results/run.jsonl
+uv run --env-file .env python -m evals.run_eval <directory or fixture files> --provider token-factory --repeats 3 --workers 4 --output eval-results/run.jsonl
 uv run python -m evals.summarize eval-results/run.jsonl
 ```
 
 `--workers` solves that many puzzles concurrently (each solve is network-bound; four workers cut a 40-puzzle run from about 15 minutes to about 5).
 
-The harness holds the gold grids, runs the same `solve` function the CLI uses, reveals the solution only after each solve, prints one JSON line per run, and appends metric-only records to the run log. `summarize` turns any set of records into a report. Everything is deterministic; there is no model-as-judge in the scoring.
+The harness holds the gold grids, runs the same `solve` function the CLI uses, reveals the solution only after each solve, prints one JSON line per run, and appends metric-only records to the run log. `summarize` turns any set of records into a report. Scoring is deterministic; there is no model-as-judge in the scoring.
 
 **Two verdicts per run.** The solver's own status is decided without gold: `complete` means every entry is verified, `incomplete` means the rounds ran out with unverified entries, `budget_exhausted` means a call, cost, or time ceiling stopped it, `error` means a non-recoverable provider failure. The deterministic review is decided with gold: `pass` only if every letter matches. Success is `pass`; the status tells you whether the agent knew.
 
 **Metrics.** Exact-solve rate (the headline), letter and entry accuracy, near-miss bands (within about one and about five wrong letters), the rate at which the solver claims `complete` and the precision of that claim, model calls, reasoning tokens, cost from live catalog prices, and wall-clock latency, with Wilson intervals over runs and bootstrap intervals over puzzles.
 
-**Protocol.** Fixed configuration across runs; repeats where variance matters (the solver samples at temperature 0.2); gold never enters a prompt. The evaluation set is 39 NYT Monday puzzles from 1993 onward that were never used during development and whose clues stand on their own (puzzles built around a revealer, a notepad note, or multi-entry references are out of scope). These puzzles have been public on GitHub since 2024, so "held out" means held out from tuning, not from pretraining.
+**Protocol.** Fixed configuration across runs; repeats where variance matters (the solver samples at temperature 0.2); gold never enters a prompt. The evaluation set is 39 NYT Monday puzzles that were never used during development. These puzzles have been public on GitHub since 2024, so "held out" means held out from tuning, not from pretraining.
 
 ### Results
 
-One run per puzzle on the 39-puzzle evaluation set; the rows differ only in the sweep model and whether the audit stage runs:
+Three independent runs over the 39-puzzle evaluation set with the default configuration (Kimi K3 sweep, audit on):
 
-| Configuration | Exact (match gold) | Mean letters | Within ~5 wrong letters | "Complete" claim precision | Model calls | Cost per puzzle |
-|---|---:|---:|---:|---:|---:|---:|
-| DeepSeek V4 Flash sweep, no audit | 18 of 39 (46%, 95% CI 32 to 61) | 99.3% | 95% | 57% | 12.0 | $0.006 |
-| DeepSeek V4 Flash sweep, with audit | 26 of 39 (67%, 95% CI 51 to 79) | 99.7% | 97% | 74% | 14.3 | $0.007 |
-| Kimi K3 sweep, with audit (default) | 37 of 39 (95%, 95% CI 83 to 99) | 100.0% | 100% | 95% | 8.6 | $0.036 |
+| Run | Exact (match gold) | Mean letters | "Complete" claim precision | Model calls | Cost per puzzle |
+|---|---:|---:|---:|---:|---:|
+| 1 | 37 of 39 | 99.97% | 95% | 8.6 | $0.036 |
+| 2 | 36 of 39 | 99.93% | 95% | 8.6 | $0.036 |
+| 3 | 38 of 39 | 99.94% | 100% | 8.6 | $0.036 |
+| **All** | **111 of 117 runs (94.9%, 95% CI 89 to 98)** | | | | |
 
-Repeated three times with Kimi K3, the runs scored 37, 36, and 38 of 39: **111 of 117 runs exact (94.9%, 95% CI 89 to 98)**, with 33 puzzles solved in every run and every puzzle solved in at least one. The misses are single wrong cells. The solver samples at temperature 0.2, so individual puzzles flip between runs (between two otherwise identical DeepSeek Flash runs, 19 of 39 puzzles changed outcome), and repeats are the right way to read any single number. Per-puzzle wall clock with Kimi K3 is 30 to 50 s at eight concurrent puzzles.
+Thirty-three puzzles were solved in every run and every puzzle was solved in at least one; each miss is a single wrong cell. The solver samples at temperature 0.2, so repeats are the right way to read any single number. Per-puzzle wall clock is 30 to 50 s at eight concurrent puzzles.
 
 For scale, the SweepClip paper reports 48% exact on 100 NYT Mondays with GPT-4-Turbo under a $0.50-per-puzzle budget.
 
 ### What a miss looks like
 
-Failed runs are almost always one or two crossing entries that share a cell, where one side is a real word and the other a pattern-fitting non-word that the model proposed under a letter hint: EANYON crossing EASEL for CANYON/CASES, SWUN crossing RERUN for SWAN/RERAN. Both were proposed and each supported the other, so verification accepted them. The audit stage is the answer to exactly this: it judges each fill against its clue, and the re-ask with the contested cell blanked makes the crossing earn its verification independently.
+A miss is almost always one cell shared by two crossing entries, where one side is a real word and the other a pattern-fitting non-word that the model proposed under a letter hint (ISAT crossing ONOFFSTITCH for ISAW/ONOFFSWITCH). Both were proposed and each supported the other, so verification accepted them. The audit stage is the answer to exactly this: it judges each fill against its clue, and the re-ask with the contested cell blanked makes the crossing earn its verification independently.
 
 ## Tests
 
@@ -128,7 +129,7 @@ Fourteen offline tests: grid parsing, the audit stage adopting a confirmed corre
 ```text
 src/crossword_agent/
 ├── sweep_solver.py     the sweep → fill → verify → repair → escalate → audit loop
-├── model.py            AnswerModel protocol; NebiusModel (JSON output, reasoning controls, live prices); FixtureModel
+├── model.py            AnswerModel protocol; TokenFactoryModel (JSON output, reasoning controls, live prices); FixtureModel
 ├── puzzle.py           fixture parsing, entry derivation and numbering
 ├── types.py            Puzzle, Entry, SolveConfig, SolveResult, TraceEvent, JsonReply
 ├── run_history.py      metric-only JSONL run records
@@ -153,5 +154,5 @@ solve_with_sweep_fill(puzzle, model, config, on_event) -> SolveResult
 
 ## Scope and limitations
 
-- Evaluated on modern American-style 15x15 puzzles with self-contained clues. Puzzle-wide themes and revealers, older crosswordese vocabulary, rebus cells, diagramless grids, and image input are out of scope.
+- Evaluated on American-style 15x15 puzzles. Puzzle-wide themes and revealers, rebus cells, diagramless grids, and image input are out of scope.
 - Verification can still be fooled when a non-word and a wrong crossing agree with each other and survive the audit; runs vary at temperature 0.2, so report repeats, not single runs.

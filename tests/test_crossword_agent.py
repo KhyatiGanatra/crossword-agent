@@ -151,7 +151,7 @@ class SweepFillSolverTests(unittest.TestCase):
             name = "broken"
 
             def complete_json(self, system, user, *, thinking=False, max_tokens=4000, model=None):
-                raise ModelError("Nebius returned HTTP 401: bad key", category="http")
+                raise ModelError("Token Factory returned HTTP 401: bad key", category="http")
 
         result = solve_with_sweep_fill(self.puzzle, BrokenModel(), OFFLINE)
         self.assertEqual(result.status, "error")

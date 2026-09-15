@@ -1,4 +1,4 @@
-"""Nebius crossword-solving agent: sweep -> fill -> verify -> repair -> escalate."""
+"""Crossword-solving agent: sweep -> fill -> verify -> repair -> escalate."""
 
 from .sweep_solver import SweepFillSolver, solve_with_sweep_fill
 from .types import SolveConfig, SolveResult
