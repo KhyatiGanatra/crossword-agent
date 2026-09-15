@@ -1,0 +1,42 @@
+{
+  "id": "mini-001",
+  "title": "First Light",
+  "grid": [
+    "#...#",
+    ".....",
+    ".....",
+    ".....",
+    "#...#"
+  ],
+  "solution": [
+    "#EAR#",
+    "EMBER",
+    "ABUSE",
+    "RESIN",
+    "#REN#"
+  ],
+  "clues": {
+    "1A": "It may be lent to a speaker",
+    "1D": "Last glow of a dying fire",
+    "2D": "Misuse, as authority",
+    "3D": "Ingredient in some varnishes",
+    "4A": "Bit left glowing after a campfire",
+    "4D": "Musical ability, informally",
+    "5D": "Stimpy's cartoon pal",
+    "6A": "Treat cruelly",
+    "7A": "Sticky substance from a pine",
+    "8A": "Stimpy's cartoon pal"
+  },
+  "candidate_bank": {
+    "1A": ["LOAN", "EAR"],
+    "1D": ["EAGER", "EMBER"],
+    "2D": ["ABUSE"],
+    "3D": ["RESIN"],
+    "4A": ["EMBER"],
+    "4D": ["EAR"],
+    "5D": ["REN"],
+    "6A": ["ABUSE"],
+    "7A": ["RESIN"],
+    "8A": ["REN"]
+  }
+}

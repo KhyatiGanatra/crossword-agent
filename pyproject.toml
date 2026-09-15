@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nebius-crossword-agent"
+version = "0.1.0"
+description = "A small, observable crossword-solving agent using Nebius Token Factory"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+crossword-agent = "crossword_agent.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
